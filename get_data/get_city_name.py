@@ -62,14 +62,34 @@ def get_city_name():
     return city
 
 
+def git_html_tree(url: str):
+    headers = {
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
+    }
+    response = requests.get(url, headers=headers)
+    response.encoding = response.apparent_encoding
+    return html.fromstring(response.text)
 
 
-if __name__ == '__main__':
+def get_city_weather(city_code: str):
+    url = f'https://weather.cma.cn/web/weather/{city_code}.html'
+    tree = git_html_tree(url)
+    data = tree.xpath(
+        '/html/body/div[1]/div[2]/div[1]/div[1]/div[3]/table/tbody/tr[position() >= 3 and position() <= 7]/td[position() >= 2]/text()')
+
+    # Group by weather type
+    data_each_type = [data[i: i + 8] for i in range(0, len(data), 8)]
+    # Group by date
+    data_each_day = [data_each_type[i: i + 5] for i in range(0, len(data_each_type), 5)]
+
+    for item in data_each_day:
+        print(item)
+
+
+def update_province_and_city_name(host, user, password, database):
     city = get_city_name()
-    with open("database_info.json", 'r', encoding='utf-8') as f:
-        database_info = json.load(f)
-    database = mysql_connection(database_info['host'], database_info['user'], database_info['password'],
-                                database_info['database'])
+
+    database = mysql_connection(host, user, password, database)
 
     database.clear_table("province")
     province = [(item[0], item[1]) for item in city]
@@ -84,3 +104,10 @@ if __name__ == '__main__':
     database.insert_many("city", ("city_ID", "city_name", "province_ID"), city_data)
 
 
+if __name__ == '__main__':
+    with open("database_info.json", 'r', encoding='utf-8') as f:
+        database_info = json.load(f)
+
+    # update_province_and_city_name(database_info['host'], database_info['user'], database_info['password'], database_info['database'])
+
+    get_city_weather("54774")

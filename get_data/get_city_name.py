@@ -1,8 +1,11 @@
 import json
 import time
 import requests
+from datetime import datetime, timedelta
+from collections import Counter
+import statistics
+from logging import info, warning, error
 from lxml import html
-
 from mysql_tools.mysqlDatabase import mysql_connection
 
 
@@ -74,16 +77,40 @@ def git_html_tree(url: str):
 def get_city_weather(city_code: str):
     url = f'https://weather.cma.cn/web/weather/{city_code}.html'
     tree = git_html_tree(url)
+    # get date
+    date = datetime.today().date()
+    # get weather data
     data = tree.xpath(
-        '/html/body/div[1]/div[2]/div[1]/div[1]/div[3]/table/tbody/tr[position() >= 3 and position() <= 7]/td[position() >= 2]/text()')
+        '/html/body/div[1]/div[2]/div[1]/div[1]/div[3]/table/tbody/tr[position() >= 3]/td[position() >= 2]/text()')
 
     # Group by weather type
     data_each_type = [data[i: i + 8] for i in range(0, len(data), 8)]
     # Group by date
-    data_each_day = [data_each_type[i: i + 5] for i in range(0, len(data_each_type), 5)]
+    data_each_day = list()
+    d = 0
+    for i in range(0, len(data_each_type), 7):
+        data_each_day.append([city_code, date + timedelta(days=d), *data_each_type[i: i + 7]])
+        d = d + 1
 
     for item in data_each_day:
-        print(item)
+        for i in range(2, len(item)):
+            if i == 2:
+                for j in range(0, len(item[i])):
+                    item[i][j] = float(item[i][j][0:-1])
+            if i == 3:
+                for j in range(0, len(item[i])):
+                    if item[i][j] == '无降水':
+                        item[i][j] = 0
+                    else:
+                        item[i][j] = float(item[i][j][0:-2])
+            if i == 4 or i == 6:
+                for j in range(0, len(item[i])):
+                    item[i][j] = float(item[i][j][0:-3])
+            if i == 7 or i == 8:
+                for j in range(0, len(item[i])):
+                    item[i][j] = float(item[i][j][0:-1])/100
+
+    return data_each_day
 
 
 def update_province_and_city_name(host, user, password, database):
@@ -104,10 +131,51 @@ def update_province_and_city_name(host, user, password, database):
     database.insert_many("city", ("city_ID", "city_name", "province_ID"), city_data)
 
 
+
+def update_weather(host, user, password, database):
+    database = mysql_connection(host, user, password, database)
+    city_ID = database.sql("select city_ID from weather_sys.city")
+
+    # 测试
+    # city_ID = city_ID[0:10]
+
+    weather_data = list()
+
+    for city_id in city_ID:
+        weather = get_city_weather(city_id[0])
+
+        for item_day in weather:
+            # temperature
+            item_day[2] = statistics.mean(item_day[2])
+            # precipitation
+            item_day[3] = statistics.mean(item_day[3])
+            # wind spend
+            item_day[4] = statistics.mean(item_day[4])
+            # wind direction
+            item_day[5] = Counter(item_day[5]).most_common(1)[0][0]
+            # air pressure
+            item_day[6] = statistics.mean(item_day[6])
+            # humidity
+            item_day[7] = statistics.mean(item_day[7])
+            # cloud cover
+            item_day[8] = statistics.mean(item_day[8])
+            weather_data.append(tuple(item_day))
+
+        time.sleep(0.5)
+
+        info(f"get city {database.sql('select city_name from weather_sys.city where city_ID = %s', city_id)} weather")
+
+    database.clear_table("weather_data")
+    database.insert_many("weather_data", ("city_ID", "date", "temperature", "precipitation", "wind_speed", "wind_direction", "air_pressure", "humidity", "cloud_cover"), weather_data)
+
+    return weather_data
+
 if __name__ == '__main__':
     with open("database_info.json", 'r', encoding='utf-8') as f:
         database_info = json.load(f)
 
     # update_province_and_city_name(database_info['host'], database_info['user'], database_info['password'], database_info['database'])
 
-    get_city_weather("54774")
+    # get_city_weather("54774")
+
+    update_weather(database_info['host'], database_info['user'], database_info['password'], database_info['database'])

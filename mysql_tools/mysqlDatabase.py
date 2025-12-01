@@ -98,6 +98,17 @@ class mysql_connection:
             traceback.print_exc()
             self.connection.rollback()
 
+    def sql(self, query, params=None):
+        try:
+            if params == None:
+                self.cursor.execute(query)
+            else:
+                self.cursor.execute(query, params)
+            return self.cursor.fetchall()
+        except Exception as e:
+            logging.error(e)
+            self.connection.rollback()
+
     def __del__(self):
         try:
             if self.connection.is_connected():

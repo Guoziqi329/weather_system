@@ -163,7 +163,7 @@ def update_weather(host, user, password, database):
 
         # time.sleep(0.5)
 
-        info(f"get city {database.sql(f'select city_name from {database}.city where city_ID = %s', city_id)} weather")
+        info(f"get city {database.sql(f'select city_name from {database.database}.city where city_ID = %s', city_id)} weather")
 
     database.clear_table("weather_data")
     database.insert_many("weather_data", ("city_ID", "date", "temperature", "precipitation", "wind_speed", "wind_direction", "air_pressure", "humidity", "cloud_cover"), weather_data)

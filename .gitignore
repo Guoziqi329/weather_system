@@ -206,3 +206,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 /get_data/database_info.json
+/get_data/database_info.json
+/get_data/database_info.json
+/weather_system/database_info.json

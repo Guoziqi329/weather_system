@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+import json
 import os
 from pathlib import Path
 
@@ -72,11 +73,16 @@ WSGI_APPLICATION = "weather_system.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+with open(BASE_DIR / "database_info.json", "r") as f:
+    data = json.load(f)
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": data['database'],
+        "USER": data['user'],
+        "PASSWORD": data['password'],
+        "HOST": data['host'],
+        "PORT": '3306',
     }
 }
 

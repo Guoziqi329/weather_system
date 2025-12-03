@@ -2,6 +2,7 @@ import json
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.conf import settings
+from .models import City, Province, WeatherData
 import os
 
 
@@ -17,6 +18,17 @@ def get_USAJSON(request):
     return JsonResponse(data)
 
 
+def get_province_weather(request):
+    province = request.GET.get('province', None)
+
+    if province is not None:
+        city = City.objects.filter(province_id=province)
+        print(city)
+        return JsonResponse({"cody": "ok", "province": province})
+    else:
+        return JsonResponse({"cody": "ok", "province": None})
+
+
 def get_ChinaJSON(request):
     China_json = os.path.join(settings.BASE_DIR, 'weather_app/static/geojson/中华人民共和国_省.geojson')
     with open(China_json, 'r', encoding='utf-8') as f:
@@ -25,7 +37,6 @@ def get_ChinaJSON(request):
 
 
 def get_china_geojson(request):
-    """提供 china.json 的 API 接口（也可直接通过静态文件访问）"""
     geojson_path = os.path.join(settings.BASE_DIR, 'weather_system/static/geojson/中华人民共和国.geojson')
     with open(geojson_path, 'r', encoding='utf-8') as f:
         data = json.load(f)

@@ -19,7 +19,7 @@ def get_USAJSON(request):
 
 def get_ChinaJSON(request):
     China_json = os.path.join(settings.BASE_DIR, 'weather_app/static/geojson/中华人民共和国_省.geojson')
-    with open(China_json, 'r') as f:
+    with open(China_json, 'r', encoding='utf-8') as f:
         data = json.load(f)
     return JsonResponse(data)
 

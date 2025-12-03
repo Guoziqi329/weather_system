@@ -1,7 +1,7 @@
 var dom = document.getElementById('chart-container');
 var myChart = echarts.init(dom, null, {
-  renderer: 'canvas',
-  useDirtyRect: false
+    renderer: 'canvas',
+    useDirtyRect: false
 });
 var app = {};
 var ROOT_PATH = 'http://127.0.0.1:8000/';
@@ -9,143 +9,125 @@ var ROOT_PATH = 'http://127.0.0.1:8000/';
 var option;
 
 myChart.showLoading();
-$.get(ROOT_PATH + 'USA.json', function (usaJson) {
-  myChart.hideLoading();
-  echarts.registerMap('USA', usaJson, {
-    Alaska: {
-      left: -131,
-      top: 25,
-      width: 15
-    },
-    Hawaii: {
-      left: -110,
-      top: 28,
-      width: 5
-    },
-    'Puerto Rico': {
-      left: -76,
-      top: 26,
-      width: 2
-    }
-  });
-  option = {
-    title: {
-      text: 'USA Population Estimates (2012)',
-      subtext: 'Data from www.census.gov',
-      sublink: 'http://www.census.gov/popest/data/datasets.html',
-      left: 'right'
-    },
-    tooltip: {
-      trigger: 'item',
-      showDelay: 0,
-      transitionDuration: 0.2
-    },
-    visualMap: {
-      left: 'right',
-      min: 500000,
-      max: 38000000,
-      inRange: {
-        color: [
-          '#313695',
-          '#4575b4',
-          '#74add1',
-          '#abd9e9',
-          '#e0f3f8',
-          '#ffffbf',
-          '#fee090',
-          '#fdae61',
-          '#f46d43',
-          '#d73027',
-          '#a50026'
-        ]
-      },
-      text: ['High', 'Low'],
-      calculable: true
-    },
-    toolbox: {
-      show: true,
-      //orient: 'vertical',
-      left: 'left',
-      top: 'top',
-      feature: {
-        dataView: { readOnly: false },
-        restore: {},
-        saveAsImage: {}
-      }
-    },
-    series: [
-      {
-        name: 'USA PopEstimates',
-        type: 'map',
-        roam: true,
-        map: 'USA',
-        emphasis: {
-          label: {
-            show: true
-          }
+$.get(ROOT_PATH + 'china.json', function (chinaJson) {
+    myChart.hideLoading();
+
+    echarts.registerMap('China', chinaJson);
+
+    option = {
+        title: {
+            text: '中国人口分布',
+            subtext: '基于人口统计数据',
+            left: 'center'
         },
-        data: [
-          { name: 'Alabama', value: 4822023 },
-          { name: 'Alaska', value: 731449 },
-          { name: 'Arizona', value: 6553255 },
-          { name: 'Arkansas', value: 2949131 },
-          { name: 'California', value: 38041430 },
-          { name: 'Colorado', value: 5187582 },
-          { name: 'Connecticut', value: 3590347 },
-          { name: 'Delaware', value: 917092 },
-          { name: 'District of Columbia', value: 632323 },
-          { name: 'Florida', value: 19317568 },
-          { name: 'Georgia', value: 9919945 },
-          { name: 'Hawaii', value: 1392313 },
-          { name: 'Idaho', value: 1595728 },
-          { name: 'Illinois', value: 12875255 },
-          { name: 'Indiana', value: 6537334 },
-          { name: 'Iowa', value: 3074186 },
-          { name: 'Kansas', value: 2885905 },
-          { name: 'Kentucky', value: 4380415 },
-          { name: 'Louisiana', value: 4601893 },
-          { name: 'Maine', value: 1329192 },
-          { name: 'Maryland', value: 5884563 },
-          { name: 'Massachusetts', value: 6646144 },
-          { name: 'Michigan', value: 9883360 },
-          { name: 'Minnesota', value: 5379139 },
-          { name: 'Mississippi', value: 2984926 },
-          { name: 'Missouri', value: 6021988 },
-          { name: 'Montana', value: 1005141 },
-          { name: 'Nebraska', value: 1855525 },
-          { name: 'Nevada', value: 2758931 },
-          { name: 'New Hampshire', value: 1320718 },
-          { name: 'New Jersey', value: 8864590 },
-          { name: 'New Mexico', value: 2085538 },
-          { name: 'New York', value: 19570261 },
-          { name: 'North Carolina', value: 9752073 },
-          { name: 'North Dakota', value: 699628 },
-          { name: 'Ohio', value: 11544225 },
-          { name: 'Oklahoma', value: 3814820 },
-          { name: 'Oregon', value: 3899353 },
-          { name: 'Pennsylvania', value: 12763536 },
-          { name: 'Rhode Island', value: 1050292 },
-          { name: 'South Carolina', value: 4723723 },
-          { name: 'South Dakota', value: 833354 },
-          { name: 'Tennessee', value: 6456243 },
-          { name: 'Texas', value: 26059203 },
-          { name: 'Utah', value: 2855287 },
-          { name: 'Vermont', value: 626011 },
-          { name: 'Virginia', value: 8185867 },
-          { name: 'Washington', value: 6897012 },
-          { name: 'West Virginia', value: 1855413 },
-          { name: 'Wisconsin', value: 5726398 },
-          { name: 'Wyoming', value: 576412 },
-          { name: 'Puerto Rico', value: 3667084 }
+        tooltip: {
+            trigger: 'item',
+            formatter: function (params) {
+                // 检查value是否存在且为数字
+                if (params.value && !isNaN(params.value)) {
+                    // 格式化人口数量（例如：10000000 -> 1000万）
+                    var value = params.value;
+                    var formattedValue;
+                    if (value >= 100000000) {
+                        formattedValue = (value / 100000000).toFixed(2) + '亿';
+                    } else if (value >= 10000) {
+                        formattedValue = (value / 10000).toFixed(2) + '万';
+                    } else {
+                        formattedValue = value;
+                    }
+                    return params.name + ': ' + formattedValue;
+                } else {
+                    return params.name + ': 数据暂缺';
+                }
+            }
+        },
+        visualMap: {
+            left: 'right',
+            min: 1000000, // 最小人口数（可根据实际数据调整）
+            max: 150000000, // 最大人口数（可根据实际数据调整）
+            inRange: {
+                color: [
+                    '#313695',
+                    '#4575b4',
+                    '#74add1',
+                    '#abd9e9',
+                    '#e0f3f8',
+                    '#ffffbf',
+                    '#fee090',
+                    '#fdae61',
+                    '#f46d43',
+                    '#d73027',
+                    '#a50026'
+                ]
+            },
+            text: ['高人口', '低人口'],
+            calculable: true
+        },
+        toolbox: {
+            show: true,
+            left: 'left',
+            top: 'top',
+            feature: {
+                dataView: {readOnly: false},
+                restore: {},
+                saveAsImage: {}
+            }
+        },
+        series: [
+            {
+                name: '中国人口',
+                type: 'map',
+                roam: true, // 允许缩放和平移
+                map: 'China',
+                emphasis: {
+                    label: {
+                        show: true // 高亮时显示省份名称
+                    }
+                },
+                data: [
+                    {name: '北京市', value: 21880000},
+                    {name: '天津市', value: 13870000},
+                    {name: '河北', value: 74610000},
+                    {name: '山西', value: 34920000},
+                    {name: '内蒙古', value: 24050000},
+                    {name: '辽宁', value: 42590000},
+                    {name: '吉林', value: 23980000},
+                    {name: '黑龙江', value: 31850000},
+                    {name: '上海', value: 24890000},
+                    {name: '江苏', value: 84750000},
+                    {name: '浙江', value: 64570000},
+                    {name: '安徽', value: 61030000},
+                    {name: '福建', value: 41540000},
+                    {name: '江西', value: 45190000},
+                    {name: '山东', value: 101600000},
+                    {name: '河南', value: 99410000},
+                    {name: '湖北', value: 57750000},
+                    {name: '湖南', value: 66440000},
+                    {name: '广东', value: 126010000},
+                    {name: '广西', value: 50130000},
+                    {name: '海南', value: 10080000},
+                    {name: '重庆', value: 32120000},
+                    {name: '四川', value: 83710000},
+                    {name: '贵州', value: 38560000},
+                    {name: '云南', value: 47210000},
+                    {name: '西藏', value: 3650000},
+                    {name: '陕西', value: 39530000},
+                    {name: '甘肃', value: 25020000},
+                    {name: '青海', value: 5930000},
+                    {name: '宁夏', value: 7200000},
+                    {name: '新疆', value: 25850000},
+                    {name: '台湾', value: 23310000},
+                    {name: '香港', value: 7390000},
+                    {name: '澳门', value: 680000}
+                ]
+            }
         ]
-      }
-    ]
-  };
-  myChart.setOption(option);
+    };
+    myChart.setOption(option);
 });
 
 if (option && typeof option === 'object') {
-  myChart.setOption(option);
+    myChart.setOption(option);
 }
 
 window.addEventListener('resize', myChart.resize);

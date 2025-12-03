@@ -1,9 +1,12 @@
 * {
-  margin: 0;
-  padding: 0;
+    margin: 0;
+    padding: 0;
 }
+
 #chart-container {
-  position: relative;
-  height: 100vh;
-  overflow: hidden;
+    position: relative;
+    width: 80%;
+    height: 80vh;
+    margin: 10vh auto;
+    overflow: hidden;
 }

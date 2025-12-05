@@ -8,6 +8,23 @@ var ROOT_PATH = 'http://127.0.0.1:8000/';
 
 var option;
 
+var weather_data, date;
+
+$.ajax(
+    {
+        url: ROOT_PATH + 'get_date',
+        type: 'GET',
+        dataType: 'json',
+        success: function (res) {
+            date = res.data;
+            console.log(date);
+        },
+        error: function (res) {
+            console.log(res);
+        }
+    }
+)
+
 myChart.showLoading();
 $.get(ROOT_PATH + 'china.json', function (chinaJson) {
     myChart.hideLoading();
@@ -23,19 +40,13 @@ $.get(ROOT_PATH + 'china.json', function (chinaJson) {
         tooltip: {
             trigger: 'item',
             formatter: function (params) {
-                // 检查value是否存在且为数字
                 if (params.value && !isNaN(params.value)) {
-                    // 格式化人口数量（例如：10000000 -> 1000万）
-                    var value = params.value;
-                    var formattedValue;
-                    if (value >= 100000000) {
-                        formattedValue = (value / 100000000).toFixed(2) + '亿';
-                    } else if (value >= 10000) {
-                        formattedValue = (value / 10000).toFixed(2) + '万';
-                    } else {
-                        formattedValue = value;
-                    }
-                    return params.name + ': ' + formattedValue;
+                    // 安全检查value是否为有效数字
+                    return [
+                        '<div style="font-weight:bold;color:#333;padding-bottom:4px;border-bottom:1px solid #eee">' + params.name + '</div>',
+                        '人口: ' + params.value+ ' 人',
+
+                    ].join('<br/>');
                 } else {
                     return params.name + ': 数据暂缺';
                 }
@@ -43,8 +54,8 @@ $.get(ROOT_PATH + 'china.json', function (chinaJson) {
         },
         visualMap: {
             left: 'right',
-            min: 1000000, // 最小人口数（可根据实际数据调整）
-            max: 150000000, // 最大人口数（可根据实际数据调整）
+            min: 1000000,
+            max: 150000000,
             inRange: {
                 color: [
                     '#313695',

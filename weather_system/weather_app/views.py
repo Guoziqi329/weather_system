@@ -57,10 +57,3 @@ def get_ChinaJSON(request):
     with open(China_json, 'r', encoding='utf-8') as f:
         data = json.load(f)
     return JsonResponse(data)
-
-
-def get_china_geojson(request):
-    geojson_path = os.path.join(settings.BASE_DIR, 'weather_system/static/geojson/中华人民共和国.geojson')
-    with open(geojson_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    return JsonResponse(data)

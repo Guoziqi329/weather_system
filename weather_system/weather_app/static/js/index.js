@@ -90,8 +90,15 @@ async function update() {
     var now_date = update_date(date_list);
 
     // 获得data数据
-    const promises = Object.values(province_id).map(id => get_weather(id, now_date));
-    var data = await Promise.all(promises);
+    const weatherPromises = Object.entries(province_id).map(async ([provinceName, id]) => {
+        const res = await get_weather(id, now_date);
+        return {
+            name: provinceName,               // 必须有 name
+            value: res.value,           // 主值（用于 visualMap 颜色）
+            temperature: res.value, humidity: res.humidity, wind_speed: res.wind_speed
+        };
+    });
+    var data = await Promise.all(weatherPromises);
 
     console.log(data);
     // 更新地图数据
@@ -104,8 +111,6 @@ async function update() {
     date_list = await get_date();
     // 获得省份列表
     province_id = await get_province_id();
-    // 当前时间
-    var now_date = date_list[0]['date'];
 
     console.log(date_list);
     console.log(province_id);
@@ -116,13 +121,7 @@ async function update() {
     updateMapTemperature(max_temperature, min_temperature);
     console.log(max_temperature, min_temperature);
 
-    // 获得data数据
-    const promises = Object.values(province_id).map(id => get_weather(id, now_date));
-    var data = await Promise.all(promises);
-
-    console.log(data);
-    // 更新地图数据
-    updateMapData(data);
+    await update();
 })();
 
 
@@ -137,11 +136,16 @@ $.get(ROOT_PATH + 'china.json', function (chinaJson) {
             text: '中国天气信息', subtext: '数据来源中国气象局', left: 'right'
         }, tooltip: {
             trigger: 'item', formatter: function (params) {
-                if (params.value && !isNaN(params.value)) {
-                    return ['<div style="font-weight:bold;color:#333;padding-bottom:4px;border-bottom:1px solid #eee">' + params.name + '</div>', '人口: ' + params.value + ' 人',].join('<br/>');
-                } else {
-                    return params.name + ': 数据暂缺';
+                const d = params.data;
+                if (!d || typeof d !== 'object') {
+                    return d?.name + ': 数据异常';
                 }
+
+                return `<div style="font-weight:bold;color:#333;padding-bottom:4px;border-bottom:1px solid #eee">${d.name}</div>
+                    温度: ${d.temperature?.toFixed(1)} ℃<br/>
+                    湿度: ${d.humidity ?? '--'} %<br/>
+                    风速: ${d.wind_speed ?? '--'} m/s
+                    `;
             }
         }, visualMap: {
             left: 'right', min: -30, max: 40, inRange: {

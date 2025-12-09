@@ -10,4 +10,6 @@ urlpatterns = [
     path('province_weather', views.get_province_weather, name='get_province_weather'),
     path('province_ID', views.get_province_ID, name='get_province_ID'),
     path('get_date', views.get_date, name='get_date'),
+    path('max_temperature', views.max_temperature, name='max_temperature'),
+    path('min_temperature', views.min_temperature, name='min_temperature'),
 ]

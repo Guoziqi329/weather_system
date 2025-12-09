@@ -1,29 +1,130 @@
+// 绑定控件时间
+document.getElementById('date_slider').addEventListener('input', update);
+
 var dom = document.getElementById('chart-container');
 var myChart = echarts.init(dom, null, {
-    renderer: 'canvas',
-    useDirtyRect: false
+    renderer: 'canvas', useDirtyRect: false
 });
 var app = {};
 var ROOT_PATH = 'http://127.0.0.1:8000/';
 
 var option;
 
-var weather_data, date;
+let date_list;
+let province_id;
 
-$.ajax(
-    {
-        url: ROOT_PATH + 'get_date',
-        type: 'GET',
-        dataType: 'json',
-        success: function (res) {
-            date = res.data;
-            console.log(date);
-        },
-        error: function (res) {
-            console.log(res);
-        }
+//            定义方法
+//   获得时间
+async function get_date() {
+    try {
+        const userData = await $.ajax({
+            url: ROOT_PATH + 'get_date', type: 'GET', dataType: 'json'
+        });
+        return userData.data;
+    } catch (error) {
+        console.log(error)
+        return null;
     }
-)
+}
+
+
+// 设置允许时间
+function update_date(date_list) {
+    var date = document.getElementById('date_slider');
+    $('#r-value').text(date_list[date.value - 1]['date']);
+    var now_date = date_list[date.value - 1]['date'];
+    console.log(date_list[date.value - 1]['date']);
+    return now_date;
+}
+
+
+// 获得各个省份ID
+async function get_province_id() {
+    try {
+        const res = await $.ajax({
+            url: ROOT_PATH + 'province_ID', type: 'GET', dataType: 'json'
+        });
+        return res.data;
+    } catch (error) {
+        console.error("error", error);
+        return [];
+    }
+}
+
+// 通过省份ID和时间获得省份天气数据
+async function get_weather(province_id, date) {
+    const weather_data = await $.ajax({
+        url: ROOT_PATH + 'province_weather', data: {province: province_id, date: date}, type: 'GET', dataType: 'json',
+    });
+    return weather_data.data;
+}
+
+// 获得最大和最小气温
+async function get_max_and_min_temperature() {
+    const max_temperature = await $.ajax({
+        url: ROOT_PATH + 'max_temperature', type: 'GET', dataType: 'json'
+    })
+
+    const min_temperature = await $.ajax({
+        url: ROOT_PATH + 'min_temperature', type: 'GET', dataType: 'json'
+    })
+    return [max_temperature.data, min_temperature.data];
+}
+
+
+// 更新地图数据
+function updateMapData(data) {
+    myChart.setOption({
+        series: [{"data": data}]
+    });
+}
+
+// 更新地图天气数据
+function updateMapTemperature(max_temperature, min_temperature) {
+    myChart.setOption([{
+        visualMap: {min: min_temperature, max: max_temperature}
+    }])
+}
+
+async function update() {
+    var now_date = update_date(date_list);
+
+    // 获得data数据
+    const promises = Object.values(province_id).map(id => get_weather(id, now_date));
+    var data = await Promise.all(promises);
+
+    console.log(data);
+    // 更新地图数据
+    updateMapData(data);
+}
+
+
+(async () => {
+    // 获得时间列表
+    date_list = await get_date();
+    // 获得省份列表
+    province_id = await get_province_id();
+    // 当前时间
+    var now_date = date_list[0]['date'];
+
+    console.log(date_list);
+    console.log(province_id);
+
+    // 设置地图最低和最高温度
+    const temperature = await get_max_and_min_temperature();
+    var max_temperature = temperature[0][0], min_temperature = temperature[1][0];
+    updateMapTemperature(max_temperature, min_temperature);
+    console.log(max_temperature, min_temperature);
+
+    // 获得data数据
+    const promises = Object.values(province_id).map(id => get_weather(id, now_date));
+    var data = await Promise.all(promises);
+
+    console.log(data);
+    // 更新地图数据
+    updateMapData(data);
+})();
+
 
 myChart.showLoading();
 $.get(ROOT_PATH + 'china.json', function (chinaJson) {
@@ -33,112 +134,34 @@ $.get(ROOT_PATH + 'china.json', function (chinaJson) {
 
     option = {
         title: {
-            text: '中国人口分布',
-            subtext: '基于人口统计数据',
-            left: 'right'
-        },
-        tooltip: {
-            trigger: 'item',
-            formatter: function (params) {
+            text: '中国天气信息', subtext: '数据来源中国气象局', left: 'right'
+        }, tooltip: {
+            trigger: 'item', formatter: function (params) {
                 if (params.value && !isNaN(params.value)) {
-                    // 安全检查value是否为有效数字
-                    return [
-                        '<div style="font-weight:bold;color:#333;padding-bottom:4px;border-bottom:1px solid #eee">' + params.name + '</div>',
-                        '人口: ' + params.value+ ' 人',
-
-                    ].join('<br/>');
+                    return ['<div style="font-weight:bold;color:#333;padding-bottom:4px;border-bottom:1px solid #eee">' + params.name + '</div>', '人口: ' + params.value + ' 人',].join('<br/>');
                 } else {
                     return params.name + ': 数据暂缺';
                 }
             }
-        },
-        visualMap: {
-            left: 'right',
-            min: 1000000,
-            max: 150000000,
-            inRange: {
-                color: [
-                    '#313695',
-                    '#4575b4',
-                    '#74add1',
-                    '#abd9e9',
-                    '#e0f3f8',
-                    '#ffffbf',
-                    '#fee090',
-                    '#fdae61',
-                    '#f46d43',
-                    '#d73027',
-                    '#a50026'
-                ]
-            },
-            text: ['高人口', '低人口'],
-            calculable: true
-        },
-        toolbox: {
-            show: true,
-            left: 'left',
-            top: 'top',
-            feature: {
-                dataView: {readOnly: false},
-                restore: {},
-                saveAsImage: {}
+        }, visualMap: {
+            left: 'right', min: -30, max: 40, inRange: {
+                color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+            }, text: ['高气温', '低气温'], calculable: true
+        }, toolbox: {
+            show: true, left: 'left', top: 'top', feature: {
+                dataView: {readOnly: false}, restore: {}, saveAsImage: {}
             }
-        },
-        series: [
-            {
-                name: '中国人口',
-                type: 'map',
-                roam: true, // 允许缩放和平移
-                map: 'China',
-                emphasis: {
-                    label: {
-                        show: true // 高亮时显示省份名称
-                    }
-                },
-                data: [
-                    {name: '北京市', value: 21880000},
-                    {name: '天津市', value: 13870000},
-                    {name: '河北省', value: 74610000},
-                    {name: '山西省', value: 34920000},
-                    {name: '内蒙古自治区', value: 24050000},
-                    {name: '辽宁省', value: 42590000},
-                    {name: '吉林省', value: 23980000},
-                    {name: '黑龙江省', value: 31850000},
-                    {name: '上海市', value: 24890000},
-                    {name: '江苏省', value: 84750000},
-                    {name: '浙江省', value: 64570000},
-                    {name: '安徽省', value: 61030000},
-                    {name: '福建省', value: 41540000},
-                    {name: '江西省', value: 45190000},
-                    {name: '山东省', value: 101600000},
-                    {name: '河南省', value: 99410000},
-                    {name: '湖北省', value: 57750000},
-                    {name: '湖南省', value: 66440000},
-                    {name: '广东省', value: 126010000},
-                    {name: '广西壮族自治区', value: 50130000},
-                    {name: '海南省', value: 10080000},
-                    {name: '重庆市', value: 32120000},
-                    {name: '四川省', value: 83710000},
-                    {name: '贵州省', value: 38560000},
-                    {name: '云南省', value: 47210000},
-                    {name: '西藏自治区', value: 3650000},
-                    {name: '陕西省', value: 39530000},
-                    {name: '甘肃省', value: 25020000},
-                    {name: '青海省', value: 5930000},
-                    {name: '宁夏回族自治区', value: 7200000},
-                    {name: '新疆维吾尔自治区', value: 25850000},
-                    {name: '台湾省', value: 23310000},
-                    {name: '香港特别行政区', value: 7390000},
-                    {name: '澳门特别行政区', value: 680000}
-                ]
-            }
-        ]
+        }, series: [{
+            name: '中国人口', type: 'map', roam: true, // 允许缩放和平移
+            map: 'China', emphasis: {
+                label: {
+                    show: true // 高亮时显示省份名称
+                }
+            }, data: []
+        }]
     };
     myChart.setOption(option);
 });
 
-if (option && typeof option === 'object') {
-    myChart.setOption(option);
-}
 
 window.addEventListener('resize', myChart.resize);

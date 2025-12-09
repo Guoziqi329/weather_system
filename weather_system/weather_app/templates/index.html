@@ -6,12 +6,24 @@
     <meta charset="utf-8">
     <title>China Population Estimates (2012)</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-
 </head>
 <body>
-    <div id="chart-container"></div>
-    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
-    <script src="{% static 'js/echarts.min.js' %}"></script>
-    <script src="{% static 'js/index.js' %}"></script>
+<div class="top">
+    <div class="title">
+        <span>Weather system</span>
+    </div>
+    <div class="slider-container">
+        <div class="slider-label">
+            <span>date：</span>
+            <span id="r-value">2025-12-01</span>
+        </div>
+        <input type="range" min="1" max="7" value="1" class="slider" id="date_slider" >
+    </div>
+</div>
+
+<div id="chart-container"></div>
+<script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
+<script src="{% static 'js/echarts.min.js' %}"></script>
+<script src="{% static 'js/index.js' %}"></script>
 </body>
 </html>

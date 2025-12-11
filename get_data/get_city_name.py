@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 import requests
 from datetime import datetime, timedelta
@@ -7,6 +8,7 @@ import statistics
 from logging import info, warning, error
 from lxml import html
 from mysql_tools.mysqlDatabase import mysql_connection
+from concurrent.futures import ThreadPoolExecutor
 
 
 def get_city_name():
@@ -75,6 +77,8 @@ def git_html_tree(url: str):
 
 
 def get_city_weather(city_code: str):
+    if type(city_code) == tuple:
+        city_code = city_code[0]
     url = f'https://weather.cma.cn/web/weather/{city_code}.html'
     tree = git_html_tree(url)
     # get date
@@ -108,15 +112,16 @@ def get_city_weather(city_code: str):
                     item[i][j] = float(item[i][j][0:-3])
             if i == 7 or i == 8:
                 for j in range(0, len(item[i])):
-                    item[i][j] = float(item[i][j][0:-1])/100
+                    item[i][j] = float(item[i][j][0:-1]) / 100
+    info(f"get city weather data --- {city_code}")
 
     return data_each_day
 
 
 def update_province_and_city_name(host, user, password, database):
-    city = get_city_name()
-
     database = mysql_connection(host, user, password, database)
+
+    city = get_city_name()
 
     database.clear_table("province")
     province = [(item[0], item[1]) for item in city]
@@ -131,44 +136,45 @@ def update_province_and_city_name(host, user, password, database):
     database.insert_many("city", ("city_ID", "city_name", "province_ID"), city_data)
 
 
-
 def update_weather(host, user, password, database):
     database = mysql_connection(host, user, password, database)
-    city_ID = database.sql("select city_ID from weather_sys.city")
+
+    city_ID = database.sql("select city_ID from weather_system.city")
 
     # 测试
     # city_ID = city_ID[0:10]
 
     weather_data = list()
 
-    for city_id in city_ID:
-        weather = get_city_weather(city_id[0])
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(get_city_weather, city_id) for city_id in city_ID]
 
-        for item_day in weather:
-            # temperature
-            item_day[2] = statistics.mean(item_day[2])
-            # precipitation
-            item_day[3] = statistics.mean(item_day[3])
-            # wind spend
-            item_day[4] = statistics.mean(item_day[4])
-            # wind direction
-            item_day[5] = Counter(item_day[5]).most_common(1)[0][0]
-            # air pressure
-            item_day[6] = statistics.mean(item_day[6])
-            # humidity
-            item_day[7] = statistics.mean(item_day[7])
-            # cloud cover
-            item_day[8] = statistics.mean(item_day[8])
-            weather_data.append(tuple(item_day))
+        for future in futures:
+            for item_day in future.result():
+                # temperature
+                item_day[2] = statistics.mean(item_day[2])
+                # precipitation
+                item_day[3] = statistics.mean(item_day[3])
+                # wind spend
+                item_day[4] = statistics.mean(item_day[4])
+                # wind direction
+                item_day[5] = Counter(item_day[5]).most_common(1)[0][0]
+                # air pressure
+                item_day[6] = statistics.mean(item_day[6])
+                # humidity
+                item_day[7] = statistics.mean(item_day[7])
+                # cloud cover
+                item_day[8] = statistics.mean(item_day[8])
+                weather_data.append(tuple(item_day))
 
-        # time.sleep(0.5)
-
-        info(f"get city {database.sql(f'select city_name from {database.database}.city where city_ID = %s', city_id)} weather")
-
+    print(weather_data)
     database.clear_table("weather_data")
-    database.insert_many("weather_data", ("city_ID", "date", "temperature", "precipitation", "wind_speed", "wind_direction", "air_pressure", "humidity", "cloud_cover"), weather_data)
+    database.insert_many("weather_data",
+                         ("city_ID", "date", "temperature", "precipitation", "wind_speed", "wind_direction",
+                          "air_pressure", "humidity", "cloud_cover"), weather_data)
 
     return weather_data
+
 
 if __name__ == '__main__':
     with open("database_info.json", 'r', encoding='utf-8') as f:
